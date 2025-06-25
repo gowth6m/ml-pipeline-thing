@@ -1,0 +1,67 @@
+networks:
+    web:
+        external: true
+
+volumes:
+    ml-pipeline-thing-redis-data:
+        external: true
+
+services:
+    redis:
+        image: redis:7-alpine
+        restart: unless-stopped
+        ports:
+            - "6382:6379"
+        volumes:
+            - ml-pipeline-thing-redis-data:/data
+        networks:
+            - web
+
+    backend:
+        build:
+            context: ../../backend
+            dockerfile: Dockerfile
+        image: ml-pipeline-thing-backend:prod
+        restart: unless-stopped
+        env_file:
+            - ../../backend/.env
+        environment:
+            REDIS_HOST: ml-pipeline-thing-redis
+            REDIS_PORT: "6379"
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.ml-pipeline-thing-backend.rule=Host(`api.ml-pipeline-thing.gowtham.io`)"
+            - "traefik.http.routers.ml-pipeline-thing-backend.entrypoints=websecure"
+            - "traefik.http.routers.ml-pipeline-thing-backend.tls=true"
+            - "traefik.http.routers.ml-pipeline-thing-backend.tls.certresolver=myresolver"
+            - "traefik.http.services.ml-pipeline-thing-backend.loadbalancer.server.port=9095"
+            - "traefik.http.routers.ml-pipeline-thing-backend-redirect.rule=Host(`api.ml-pipeline-thing.gowtham.io`)"
+            - "traefik.http.routers.ml-pipeline-thing-backend-redirect.entrypoints=web"
+            - "traefik.http.routers.ml-pipeline-thing-backend-redirect.middlewares=ml-pipeline-thing-https-redirect"
+            - "traefik.http.middlewares.ml-pipeline-thing-https-redirect.redirectscheme.scheme=https"
+        depends_on:
+            - redis
+        networks:
+            - web
+
+    frontend:
+        build:
+            context: ../../frontend
+            dockerfile: Dockerfile
+            args:
+                VITE_API_BASE_URL: https://api.ml-pipeline-thing.gowtham.io
+        image: ml-pipeline-thing-frontend:prod
+        restart: unless-stopped
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.ml-pipeline-thing-frontend.rule=Host(`ml-pipeline-thing.gowtham.io`)"
+            - "traefik.http.routers.ml-pipeline-thing-frontend.entrypoints=websecure"
+            - "traefik.http.routers.ml-pipeline-thing-frontend.tls=true"
+            - "traefik.http.routers.ml-pipeline-thing-frontend.tls.certresolver=myresolver"
+            - "traefik.http.services.ml-pipeline-thing-frontend.loadbalancer.server.port=80"
+            - "traefik.http.routers.ml-pipeline-thing-frontend-redirect.rule=Host(`ml-pipeline-thing.gowtham.io`)"
+            - "traefik.http.middlewares.ml-pipeline-thing-https-redirect.redirectscheme.scheme=https"
+            - "traefik.http.routers.ml-pipeline-thing-frontend-redirect.middlewares=ml-pipeline-thing-https-redirect"
+            - "traefik.http.routers.ml-pipeline-thing-frontend-redirect.rule=Host(`ml-pipeline-thing.gowtham.io`) && PathPrefix(`/`) && !PathPrefix(`/.well-known/acme-challenge/`)"
+        networks:
+            - web
