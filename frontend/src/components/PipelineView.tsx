@@ -1,10 +1,8 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ReactFlow,
     Background,
-    Controls,
-    MiniMap,
     useNodesState,
     useEdgesState,
     Node,
@@ -51,7 +49,7 @@ export function PipelineView({ pipeline, onViewRuns }: PipelineViewProps) {
             });
             toast({
                 title: "Pipeline Run Started",
-                description: `Pipeline run #${data.runId} has been triggered successfully.`,
+                description: `Pipeline run #${data.id} has been triggered successfully.`,
             });
         },
         onError: (error) => {

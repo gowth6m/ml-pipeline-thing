@@ -24,7 +24,9 @@ const PipelineDetail = () => {
     });
 
     const handleViewRuns = () => {
-        navigate(`/pipeline/${pipelineId}/runs`);
+        navigate(`/pipeline/${pipelineId}/runs`, {
+            state: { pipeline: pipeline as Pipeline },
+        });
     };
 
     const handleBackToPipelines = () => {
